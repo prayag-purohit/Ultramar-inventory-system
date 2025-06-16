@@ -1,0 +1,5 @@
+.env
+Vatsal docs/*
+newdf/*
+cleaned_uploads/*
+__pycache__
