@@ -33,7 +33,12 @@ def update_master_sheet(master_df: pd.DataFrame, sales_df: pd.DataFrame, invoice
     sales['UPC'] = sales['UPC'].astype(str).str.strip()
     invoices['UPC'] = invoices['UPC'].astype(str).str.strip()
 
-    master['current_stock'] = pd.to_numeric(master['current_stock'], errors='coerce').fillna(0)
+
+    if 'current_stock' in master.columns:
+        master['current_stock'] = pd.to_numeric(master['current_stock'], errors='coerce').fillna(0)
+    else:
+        master['current_stock'] = 0  #
+        st.warning("'current_stock' column not found, creating new one with 0s")
     sales['Units'] = pd.to_numeric(sales['Units'], errors='coerce').fillna(0)
     invoices['Quantity Confirmed'] = pd.to_numeric(invoices['Quantity Confirmed'], errors='coerce').fillna(0)
 
@@ -103,46 +108,58 @@ def clean_beer_store_invoice_df(beer_store_invoice_df):
 
 
 st.set_page_config(page_title="Streamlit App", page_icon=":guardsman:", layout="wide")
-st.title("Inventory App")
+st.title("Beer Inventory App")
+
+master_df = None
+sales_df = pd.DataFrame()
+beer_store_invoice_df = pd.DataFrame()
+
 
 beer_store_invoice_upload = st.file_uploader("Upload beer store invoice", type=["pdf"])
-
-if beer_store_invoice_upload is not None:
-    # Create a temporary file to save the uploaded PDF
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-        temp_file.write(beer_store_invoice_upload.read())
-        temp_path = temp_file.name
-
-    # Process the PDF using the main function from Invoice_parsing.py
-    beer_store_invoice_df = ip.main(document_path=temp_path)
-    beer_store_invoice_df = clean_beer_store_invoice_df(beer_store_invoice_df)
-    #st.dataframe(beer_store_invoice_df)
-
-
 sales_excel_upload = st.file_uploader("Upload sales excel file", type=['XLS', 'XLSX'])
-if sales_excel_upload is not None:
-    with tempfile.NamedTemporaryFile(delete=False) as sales_temp_file:
-        sales_temp_file.write(sales_excel_upload.read())
-        sales_temp_path = sales_temp_file.name
-    sales_df = pd.read_excel(sales_temp_path)
-    sales_df = clean_sales_xlsx(sales_df=sales_df)
-    #st.dataframe(sales_df)
-
 beer_store_master_upload = st.file_uploader("Upload beer store master excel file", type=['XLS', 'XLSX'])
-if beer_store_master_upload is not None:
-    with tempfile.NamedTemporaryFile(delete=False) as beer_master_temp_file:
-        beer_master_temp_file.write(beer_store_master_upload.read())
-        beer_master_temp_path = beer_master_temp_file.name
-    master_df = pd.read_excel(beer_master_temp_path)
-    master_df = clean_beer_store_master(beer_store_master_df=master_df)
 
-with master_df and sales_df and beer_store_invoice_df:
-    updated_inventory_sheet = update_master_sheet(master_df=master_df, sales_df=sales_df, invoice_df=beer_store_invoice_df)
-    csv = beer_store_invoice_df.to_csv(index=False).encode('utf-8')
+# Process only if master sheet is uploaded and at least one other file is present
+if st.button("Run"):
+        
+    if beer_store_invoice_upload is not None:
+        # Create a temporary file to save the uploaded PDF
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            temp_file.write(beer_store_invoice_upload.read())
+            temp_path = temp_file.name
 
-    st.download_button(
-        label="Download CSV",
-        data=csv,
-        file_name="updated_inventory.csv",
-        mime="text/csv"
-    )
+        # Process the PDF using the main function from Invoice_parsing.py
+        beer_store_invoice_df = ip.main(document_path=temp_path)
+        beer_store_invoice_df = clean_beer_store_invoice_df(beer_store_invoice_df)
+        #st.dataframe(beer_store_invoice_df)
+
+    if sales_excel_upload is not None:
+        with tempfile.NamedTemporaryFile(delete=False) as sales_temp_file:
+            sales_temp_file.write(sales_excel_upload.read())
+            sales_temp_path = sales_temp_file.name
+        sales_df = pd.read_excel(sales_temp_path)
+        sales_df = clean_sales_xlsx(sales_df=sales_df)
+        #st.dataframe(sales_df)
+
+    if beer_store_master_upload is not None:
+        with tempfile.NamedTemporaryFile(delete=False) as beer_master_temp_file:
+            beer_master_temp_file.write(beer_store_master_upload.read())
+            beer_master_temp_path = beer_master_temp_file.name
+        master_df = pd.read_excel(beer_master_temp_path)
+        master_df = clean_beer_store_master(beer_store_master_df=master_df)
+
+    if master_df is not None and (not sales_df.empty and not beer_store_invoice_df.empty):
+        updated_inventory_sheet = update_master_sheet(master_df=master_df, sales_df=sales_df, invoice_df=beer_store_invoice_df)
+        st.dataframe(updated_inventory_sheet)  # Display the updated inventory
+        csv = updated_inventory_sheet.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download updated inventory CSV",
+            data=csv,
+            file_name="updated_inventory.csv",
+            mime="text/csv"
+        )
+    else:
+        if master_df is None:
+            st.error("Please upload the master sheet.")
+        else:
+            st.error("Please upload at least one of the sales Excel or beer store invoice PDF.")

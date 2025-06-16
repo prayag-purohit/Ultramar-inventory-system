@@ -24,8 +24,6 @@ def main(document_path: str):
     if response_text.endswith("```"):
         response_text = response_text[:-3].strip()
 
-    with open('response.txt', 'w') as f:
-        f.write(response_text)
     csv_file = StringIO(response_text)
     df = pd.read_csv(csv_file)
     return df
