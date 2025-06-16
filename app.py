@@ -1,6 +1,5 @@
 import streamlit as st
 import Invoice_parsing as ip
-import os
 import pandas as pd
 import tempfile
 
