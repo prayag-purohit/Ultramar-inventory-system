@@ -32,7 +32,6 @@ def update_master_sheet(master_df: pd.DataFrame, sales_df: pd.DataFrame, invoice
     sales['UPC'] = sales['UPC'].astype(str).str.strip()
     invoices['UPC'] = invoices['UPC'].astype(str).str.strip()
 
-
     if 'current_stock' in master.columns:
         master['current_stock'] = pd.to_numeric(master['current_stock'], errors='coerce').fillna(0)
     else:
@@ -47,7 +46,6 @@ def update_master_sheet(master_df: pd.DataFrame, sales_df: pd.DataFrame, invoice
 
     invoice_summary = invoices.groupby('UPC')[['Product Description', 'Quantity Confirmed']].sum().reset_index()
     invoice_summary.rename(columns={'Quantity Confirmed': 'quantity_received', 'Product Description': 'recived_product_name'}, inplace=True)
-
 
     #Conducting merge operations
 
@@ -64,6 +62,7 @@ def update_master_sheet(master_df: pd.DataFrame, sales_df: pd.DataFrame, invoice
         updated_df['quantity_received'] - 
         updated_df['quantity_sold']
     )
+
 
     # Cleaning for end user
     updated_df[['current_stock', 'quantity_sold', 'quantity_received', 'new_stock']] = updated_df[['current_stock', 'quantity_sold', 'quantity_received', 'new_stock']].astype(int)
@@ -108,6 +107,27 @@ def clean_beer_store_invoice_df(beer_store_invoice_df):
 
 st.set_page_config(page_title="Streamlit App", page_icon=":guardsman:", layout="wide")
 st.title("Beer Inventory App")
+
+"""
+### Instructions: 
+- You can upload 3 files total, one file per each upload button - master sheet, invoice pdf, and sales xls
+- The Master sheet needs to be cleaned, without any empty rows or without multiple headers
+
+Required columns to run (do not change case or name)
+- Master sheet - "UPC", "current_stock"
+- Sales sheet - "Item No" (where item no is actually UPC), "Description" 
+- Invoice - "UPC Code", "Quantity Confirmed"
+
+Running the App:
+- Click the Run button after uploading files to process the inventory update.
+- Ensure the master sheet and at two other files (sales and invoice) are uploaded, or an error will display.
+
+
+Re-running the App:
+- After downloading the updated inventory CSV, update the master sheet's current_stock column with the new_stock values from the CSV before re-running.
+- Replace the old current_stock values with the new_stock values to reflect the latest inventory state.
+---
+"""
 
 master_df = None
 sales_df = pd.DataFrame()
